@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "قائمة مطعم النيلين"
+description = "An Arabic-first, mobile-friendly QR menu for مطعم النيلين للأسماك والمشويات, with clear categories, readable pricing, and a distinctive brand-matched experience."
+version = "1.0.0"
+id = "artifacts/nilein-menu"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23897
+
+[services.development]
+run = "pnpm --filter @workspace/nilein-menu run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/nilein-menu", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/nilein-menu/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23897"
+BASE_PATH = "/"
