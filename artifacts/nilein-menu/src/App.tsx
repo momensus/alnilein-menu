@@ -1,17 +1,12 @@
 import { useMemo, useState } from 'react';
 import {
   ArrowUp,
-  Check,
   ChevronLeft,
   CircleHelp,
   Clock3,
-  Download,
-  QrCode,
   Search,
-  Share2,
   X,
 } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
 import { menuCategories } from './data/menu';
 
 function App() {
@@ -19,8 +14,6 @@ function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [helpOpen, setHelpOpen] = useState(false);
-  const [qrOpen, setQrOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   const filteredCategories = useMemo(() => {
     const query = searchTerm.trim().toLocaleLowerCase('ar');
@@ -36,38 +29,6 @@ function App() {
   const chooseCategory = (id: string) => {
     setActiveCategory(id);
     setSearchTerm('');
-  };
-
-  const shareMenu = async () => {
-    const url = window.location.href;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: 'مطعم النيلين للأسماك والمشويات', url });
-      } catch {
-        // A dismissed native share sheet is not an error for the guest.
-      }
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1800);
-    } catch {
-      setHelpOpen(true);
-    }
-  };
-
-  const downloadQr = () => {
-    const svg = document.querySelector('#menu-qr svg');
-    if (!svg) return;
-    const source = new XMLSerializer().serializeToString(svg);
-    const file = new Blob([source], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(file);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'nilein-menu-qr.svg';
-    link.click();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   return (
@@ -108,14 +69,6 @@ function App() {
               data-testid="button-toggle-search"
             >
               {searchOpen ? <X size={19} /> : <Search size={19} />}
-            </button>
-            <button className="icon-button header-icon share-button" onClick={shareMenu} aria-label="مشاركة القائمة" data-testid="button-share-menu">
-              {copied ? <Check size={18} /> : <Share2 size={18} />}
-              <span className="share-label">{copied ? 'نُسخ الرابط' : 'مشاركة'}</span>
-            </button>
-            <button className="icon-button header-icon qr-button" onClick={() => setQrOpen(true)} aria-label="عرض رمز QR للقائمة" data-testid="button-show-qr">
-              <QrCode size={18} />
-              <span className="qr-label">رمز QR</span>
             </button>
           </div>
         </div>
@@ -248,20 +201,6 @@ function App() {
         </div>
       )}
 
-      {qrOpen && (
-        <div className="dialog-backdrop" role="presentation" onClick={() => setQrOpen(false)}>
-          <section className="help-dialog qr-dialog" role="dialog" aria-modal="true" aria-labelledby="qr-title" onClick={(event) => event.stopPropagation()}>
-            <button className="dialog-close" onClick={() => setQrOpen(false)} aria-label="إغلاق" data-testid="button-close-qr"><X size={19} /></button>
-            <p className="eyebrow">قائمة مطعم النيلين</p>
-            <h2 id="qr-title">رمز QR للقائمة</h2>
-            <div className="qr-frame" id="menu-qr">
-              <QRCodeSVG value={window.location.href} size={220} level="H" includeMargin bgColor="#ffffff" fgColor="#123f5b" />
-            </div>
-            <p className="dialog-copy">هذا الرمز يفتح رابط القائمة الحالي. حمّل الرمز من الصفحة المنشورة لاستخدامه مع الزوار.</p>
-            <button className="dialog-done qr-download" onClick={downloadQr} data-testid="button-download-qr"><Download size={17} /> تنزيل رمز QR بصيغة SVG</button>
-          </section>
-        </div>
-      )}
     </div>
   );
 }
