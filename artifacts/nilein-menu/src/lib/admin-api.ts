@@ -69,14 +69,14 @@ export function createCategory(input: { title: string; note?: string }) {
 }
 
 export function updateCategory(id: string, input: { title?: string; note?: string }) {
-  return request<{ ok: boolean }>(`/api/admin/categories/${id}`, {
+  return request<{ ok: boolean }>(`/api/admin/categories?id=${encodeURIComponent(id)}`, {
     method: 'PUT',
     body: JSON.stringify(input),
   });
 }
 
 export function deleteCategory(id: string) {
-  return request<{ ok: boolean }>(`/api/admin/categories/${id}`, { method: 'DELETE' });
+  return request<{ ok: boolean }>(`/api/admin/categories?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
 
 export function getAdminItems(categoryId?: string) {
@@ -95,12 +95,12 @@ export function updateItem(
   id: string,
   input: { name?: string; price?: number | null; isAvailable?: number },
 ) {
-  return request<{ ok: boolean }>(`/api/admin/items/${id}`, {
+  return request<{ ok: boolean }>(`/api/admin/items?id=${encodeURIComponent(id)}`, {
     method: 'PUT',
     body: JSON.stringify(input),
   });
 }
 
 export function deleteItem(id: string) {
-  return request<{ ok: boolean }>(`/api/admin/items/${id}`, { method: 'DELETE' });
+  return request<{ ok: boolean }>(`/api/admin/items?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
 }

@@ -22,6 +22,11 @@ function normalizePrice(value: unknown): number | null | undefined {
   return Math.trunc(n);
 }
 
+function queryId(req: VercelRequest): string {
+  const id = req.query.id;
+  return typeof id === 'string' ? id : '';
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!isAuthenticated(cookieHeader(req))) return unauthorized(res);
   try {
@@ -57,7 +62,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await bumpMenuVersion();
       return res.status(201).json({ item: row });
     }
-    res.setHeader('Allow', 'GET, POST');
+    if (req.method === 'PUT') {
+      const id = queryId(req);
+      if (!id) return res.status(400).json({ error: 'Missing id' });
+      const patch: {
+        name?: string;
+        price?: number | null;
+        isAvailable?: number;
+        sortOrder?: number;
+        updatedAt: number;
+      } = { updatedAt: Date.now() };
+      if (typeof req.body?.name === 'string' && req.body.name.trim()) patch.name = req.body.name.trim();
+      if (req.body?.price === null) {
+        patch.price = null;
+      } else if (req.body?.price !== undefined) {
+        const n = Number(req.body.price);
+        if (!Number.isFinite(n) || n < 0) return res.status(400).json({ error: 'السعر غير صالح' });
+        patch.price = Math.trunc(n);
+      }
+      if (req.body?.isAvailable === 0 || req.body?.isAvailable === 1) patch.isAvailable = req.body.isAvailable;
+      if (Number.isFinite(req.body?.sortOrder)) patch.sortOrder = Math.trunc(req.body.sortOrder);
+      await db.update(items).set(patch).where(eq(items.id, id));
+      await bumpMenuVersion();
+      return res.status(200).json({ ok: true });
+    }
+    if (req.method === 'DELETE') {
+      const id = queryId(req);
+      if (!id) return res.status(400).json({ error: 'Missing id' });
+      await db.delete(items).where(eq(items.id, id));
+      await bumpMenuVersion();
+      return res.status(200).json({ ok: true });
+    }
+    res.setHeader('Allow', 'GET, POST, PUT, DELETE');
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (error) {
     console.error('admin items failed', error);
