@@ -1,0 +1,71 @@
+import { useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+
+export type PublicMenuItem = {
+  id: string;
+  name: string;
+  price: number | null;
+};
+
+export type PublicMenuCategory = {
+  id: string;
+  title: string;
+  note: string;
+  items: PublicMenuItem[];
+};
+
+export type PublicMenu = {
+  version: number;
+  categories: PublicMenuCategory[];
+};
+
+export const menuQueryKey = ['menu'] as const;
+
+async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(url, {
+    headers: { 'Content-Type': 'application/json' },
+    ...init,
+  });
+  if (!response.ok) {
+    let message = `Request failed (${response.status})`;
+    try {
+      const body = await response.json();
+      if (typeof body?.error === 'string') message = body.error;
+    } catch {
+      /* keep default message */
+    }
+    throw new Error(message);
+  }
+  return response.json() as Promise<T>;
+}
+
+export function fetchMenu(): Promise<PublicMenu> {
+  return fetchJson<PublicMenu>('/api/menu');
+}
+
+/** Format an SDG price integer, or a dash when unset. */
+export function formatPrice(price: number | null): string {
+  if (price === null || price === undefined) return '—';
+  return `${price.toLocaleString('ar-SD')} ج.س`;
+}
+
+/**
+ * Subscribe to live menu updates. When the admin changes anything,
+ * the server pushes an event and we invalidate the menu query so
+ * every open tab re-renders with fresh prices — no refresh needed.
+ */
+export function useMenuLiveUpdates(enabled = true) {
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (!enabled || typeof EventSource === 'undefined') return;
+    const source = new EventSource('/api/sse');
+    const onUpdate = () => {
+      queryClient.invalidateQueries({ queryKey: menuQueryKey });
+    };
+    source.addEventListener('menu-updated', onUpdate);
+    return () => {
+      source.removeEventListener('menu-updated', onUpdate);
+      source.close();
+    };
+  }, [enabled, queryClient]);
+}

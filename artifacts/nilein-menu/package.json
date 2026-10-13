@@ -7,7 +7,8 @@
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
     "build": "vite build --config vite.config.ts",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "db:seed": "pnpm dlx tsx scripts/seed.ts"
   },
   "devDependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -47,12 +48,14 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "@vercel/node": "^23.0.1",
     "@vitejs/plugin-react": "catalog:",
     "@workspace/api-client-react": "workspace:*",
     "class-variance-authority": "catalog:",
     "clsx": "catalog:",
     "cmdk": "^1.1.1",
     "date-fns": "^3.6.0",
+    "drizzle-kit": "^0.31.10",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "catalog:",
     "input-otp": "^1.4.2",
@@ -75,6 +78,8 @@
     "zod": "catalog:"
   },
   "dependencies": {
+    "@libsql/client": "^0.18.0",
+    "drizzle-orm": "catalog:",
     "qrcode.react": "^4.2.0"
   }
 }
