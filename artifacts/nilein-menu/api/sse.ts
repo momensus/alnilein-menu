@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getMenuVersion } from './lib/version';
+import { getMenuVersion } from './lib/version.js';
 
 export const config = {
   maxDuration: 300,
