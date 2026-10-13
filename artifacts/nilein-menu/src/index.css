@@ -382,7 +382,7 @@ button { cursor: pointer; }
 .menu-item { min-height: 55px; display: flex; align-items: center; gap: 12px; border-top: 1px solid #e8edf7; }
 .item-index { flex: 0 0 20px; color: #8c9abd; font-size: 10px; font-variant-numeric: tabular-nums; }
 .menu-item h4 { flex: 1; margin: 0; color: #203873; font-size: 14px; font-weight: 600; }
-.item-price { flex: 0 0 auto; padding: 5px 8px; border: 1px solid #d8e4f7; border-radius: 4px; color: #3557a2; background: #eef4ff; font-size: 9px; white-space: nowrap; }
+.item-price { flex: 0 0 auto; padding: 6px 10px; border: 1px solid #d8e4f7; border-radius: 4px; color: #1d4fa8; background: #eef4ff; font-size: 13px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .menu-note { display: flex; align-items: center; gap: 12px; margin-top: 21px; padding: 15px 17px; color: #455c91; background: #eaf2ff; border-right: 3px solid #3987e8; }
 .note-icon { display: grid; flex: 0 0 28px; height: 28px; place-items: center; border-radius: 50%; color: #1d55b8; background: #d8e8ff; }
 .menu-note p { margin: 0; font-size: 11px; line-height: 1.8; }

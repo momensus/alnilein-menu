@@ -43,10 +43,10 @@ export function fetchMenu(): Promise<PublicMenu> {
   return fetchJson<PublicMenu>('/api/menu');
 }
 
-/** Format an SDG price integer, or a dash when unset. */
+/** Format an SDG price integer with Western numerals, or a dash when unset. */
 export function formatPrice(price: number | null): string {
   if (price === null || price === undefined) return '—';
-  return `${price.toLocaleString('ar-SD')} ج.س`;
+  return `${price.toLocaleString('en-US')} ج.س`;
 }
 
 /**
