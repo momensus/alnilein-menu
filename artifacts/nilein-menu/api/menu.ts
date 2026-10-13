@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { asc } from 'drizzle-orm';
 import { getDb } from './lib/db.js';
-import { categories, items } from '../db/schema.js';
+import { categories, items } from './db/schema.js';
 import { getMenuVersion } from './lib/version.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { getDb } from './db.js';
-import { meta } from '../../db/schema.js';
+import { meta } from '../db/schema.js';
 
 export const MENU_VERSION_KEY = 'menu_version';
 

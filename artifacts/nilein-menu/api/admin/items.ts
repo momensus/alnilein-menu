@@ -4,7 +4,7 @@ import { asc, eq } from 'drizzle-orm';
 import { getDb } from '../lib/db.js';
 import { isAuthenticated } from '../lib/auth.js';
 import { bumpMenuVersion } from '../lib/version.js';
-import { items } from '../../db/schema.js';
+import { items } from '../db/schema.js';
 
 function unauthorized(res: VercelResponse) {
   return res.status(401).json({ error: 'Unauthorized' });
