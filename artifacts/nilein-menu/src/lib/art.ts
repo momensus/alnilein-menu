@@ -66,7 +66,7 @@ function boardMeat(c1: string, c2: string, count: number): string {
 }
 
 export function fishSVG(c1: string, c2: string, c3: string): string {
-  return `<svg viewBox="0 0 120 60" aria-hidden="true"><g class="bob"><ellipse cx="58" cy="32" rx="34" ry="15" fill="${c1}"/><ellipse cx="52" cy="27" rx="22" ry="9" fill="${c2}"/><path d="M40 20 q6 -12 14 -14 l-2 16 Z M52 18 q4 -10 12 -12 l-2 14 Z" fill="${c3}"/><path d="M44 44 q8 8 18 6 l-6 -8 Z" fill="${c3}"/><g class="tail"><path d="M90 32 L112 18 L106 32 L112 46 Z" fill="${c3}"/></g><path d="M70 26 q4 6 0 12 M76 26 q4 6 0 12" stroke="${c3}" stroke-width="2" fill="none"/><circle cx="36" cy="29" r="3.4" fill="#101415"/><circle cx="37" cy="28" r="1.1" fill="#fff"/></g></svg>`;
+  return `<svg viewBox="0 0 120 60" aria-hidden="true"><g class="bob"><ellipse cx="62" cy="32" rx="34" ry="15" fill="${c1}"/><ellipse cx="68" cy="27" rx="22" ry="9" fill="${c2}"/><path d="M80 20 q6 -12 14 -14 l-2 16 Z M68 18 q4 -10 12 -12 l-2 14 Z" fill="${c3}"/><path d="M76 44 q-8 8 -18 6 l6 -8 Z" fill="${c3}"/><g class="tail"><path d="M30 32 L8 18 L14 32 L8 46 Z" fill="${c3}"/></g><path d="M50 26 q-4 6 0 12 M44 26 q-4 6 0 12" stroke="${c3}" stroke-width="2" fill="none"/><circle cx="84" cy="29" r="3.4" fill="#101415"/><circle cx="83" cy="28" r="1.1" fill="#fff"/></g></svg>`;
 }
 
 export const FISH_COLORS: Record<string, [string, string, string]> = {
