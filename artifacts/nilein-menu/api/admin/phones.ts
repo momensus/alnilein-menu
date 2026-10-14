@@ -1,9 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { randomUUID } from 'node:crypto';
 import { asc, eq } from 'drizzle-orm';
-import { getDb } from '../lib/db.js';
-import { isAuthenticated } from '../lib/auth.js';
-import { bumpMenuVersion } from '../lib/version.js';
+import { getDb } from '../_lib/db.js';
+import { isAuthenticated } from '../_lib/auth.js';
+import { bumpMenuVersion } from '../_lib/version.js';
 import { phones } from '../db/schema.js';
 
 function unauthorized(res: VercelResponse) {

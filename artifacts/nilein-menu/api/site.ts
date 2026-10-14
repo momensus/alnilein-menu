@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { asc } from 'drizzle-orm';
-import { getDb } from './lib/db.js';
+import { getDb } from './_lib/db.js';
 import { payments, phones } from './db/schema.js';
-import { getMenuVersion } from './lib/version.js';
+import { getMenuVersion } from './_lib/version.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
