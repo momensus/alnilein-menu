@@ -667,7 +667,8 @@ button { cursor: pointer; }
 .menu-shell button { cursor: pointer; }
 .menu-shell :focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; border-radius: 6px; }
 .menu-shell ::selection { background: rgba(224,175,85,.35); color: #fff; }
-.menu-shell .wrap { position: relative; z-index: 1; max-width: 1080px; margin-inline: auto; }
+.menu-shell .wrap { position: relative; z-index: 1; max-width: 1080px; margin-inline: auto; padding-top: 14px; }
+body { background: #120c0b; margin: 0; }
 
 .ambient { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; direction: ltr; }
 .bub { position: absolute; bottom: -24px; border-radius: 50%; border: 1px solid rgba(255,255,255,.28); background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.3), rgba(255,255,255,.03)); animation: rise-b var(--d) linear var(--dl) infinite; }

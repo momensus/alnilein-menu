@@ -40,11 +40,13 @@ function makeBubbles(n: number, min: number, max: number, dMin: number, dMax: nu
 
 type HeroFish = { top: string; w: number; dur: string; delay: string; colors: [string, string, string]; rev: boolean };
 const HERO_FISH: HeroFish[] = [
-  { top: '12%', w: 88, dur: '21s', delay: '-4s', colors: FISH_COLORS.gold, rev: false },
-  { top: '30%', w: 62, dur: '26s', delay: '-14s', colors: FISH_COLORS.pearl, rev: true },
-  { top: '52%', w: 104, dur: '19s', delay: '-9s', colors: FISH_COLORS.ember, rev: false },
-  { top: '70%', w: 52, dur: '31s', delay: '-20s', colors: FISH_COLORS.gold, rev: true },
-  { top: '84%', w: 74, dur: '24s', delay: '-2s', colors: FISH_COLORS.pearl, rev: false },
+  { top: '9%', w: 132, dur: '24s', delay: '-6s', colors: FISH_COLORS.ember, rev: false },
+  { top: '23%', w: 108, dur: '28s', delay: '-18s', colors: FISH_COLORS.ember, rev: true },
+  { top: '48%', w: 40, dur: '22s', delay: '-3s', colors: FISH_COLORS.pearl, rev: false },
+  { top: '51%', w: 36, dur: '22s', delay: '-5s', colors: FISH_COLORS.pearl, rev: false },
+  { top: '54%', w: 42, dur: '22s', delay: '-7s', colors: FISH_COLORS.pearl, rev: false },
+  { top: '50%', w: 38, dur: '22s', delay: '-9s', colors: FISH_COLORS.pearl, rev: false },
+  { top: '80%', w: 84, dur: '25s', delay: '-12s', colors: FISH_COLORS.gold, rev: true },
 ];
 
 async function copyText(text: string): Promise<boolean> {
