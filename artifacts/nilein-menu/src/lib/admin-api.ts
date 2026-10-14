@@ -120,3 +120,60 @@ export function moveCategory(id: string, direction: MoveDirection) {
     body: JSON.stringify({ action: 'move', id, direction }),
   });
 }
+
+export type AdminPhone = {
+  id: string;
+  number: string;
+  sortOrder: number;
+  createdAt: number;
+  updatedAt: number;
+};
+
+export type AdminPayment = {
+  id: string;
+  methodId: string;
+  name: string;
+  color: string;
+  ink: string;
+  number: string;
+  holder: string;
+  sortOrder: number;
+  createdAt: number;
+  updatedAt: number;
+};
+
+export const adminPhonesKey = ['admin-phones'] as const;
+export const adminPaymentsKey = ['admin-payments'] as const;
+
+export function getAdminPhones() {
+  return request<{ phones: AdminPhone[] }>('/api/admin/phones');
+}
+
+export function createPhone(number: string) {
+  return request<{ phone: AdminPhone }>('/api/admin/phones', {
+    method: 'POST',
+    body: JSON.stringify({ number }),
+  });
+}
+
+export function updatePhone(id: string, number: string) {
+  return request<{ ok: boolean }>(`/api/admin/phones?id=${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ number }),
+  });
+}
+
+export function deletePhone(id: string) {
+  return request<{ ok: boolean }>(`/api/admin/phones?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+export function getAdminPayments() {
+  return request<{ payments: AdminPayment[] }>('/api/admin/payments');
+}
+
+export function updatePayment(id: string, input: { number?: string; holder?: string }) {
+  return request<{ ok: boolean }>(`/api/admin/payments?id=${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify(input),
+  });
+}

@@ -32,6 +32,25 @@ CREATE TABLE IF NOT EXISTS meta (
   key TEXT PRIMARY KEY,
   value INTEGER NOT NULL DEFAULT 0
 );
+CREATE TABLE IF NOT EXISTS phones (
+  id TEXT PRIMARY KEY,
+  number TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS payments (
+  id TEXT PRIMARY KEY,
+  method_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  color TEXT NOT NULL,
+  ink TEXT NOT NULL,
+  number TEXT NOT NULL DEFAULT '',
+  holder TEXT NOT NULL DEFAULT '',
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
 `;
 
 async function main() {
@@ -72,6 +91,21 @@ async function main() {
           ON CONFLICT(key) DO NOTHING`,
     args: [],
   });
+
+  const paymentSeeds = [
+    { id: 'pay-bankak', methodId: 'bankak', name: 'بنكك', color: '#b8312f', ink: '#fff', sort: 0 },
+    { id: 'pay-ocash', methodId: 'ocash', name: 'أوكاش', color: '#7a4bb3', ink: '#fff', sort: 1 },
+    { id: 'pay-fawry', methodId: 'fawry', name: 'فوري', color: '#f2b705', ink: '#1a1210', sort: 2 },
+    { id: 'pay-cashi', methodId: 'cashi', name: 'كاشي', color: '#1f9d8a', ink: '#fff', sort: 3 },
+  ];
+  for (const p of paymentSeeds) {
+    await client.execute({
+      sql: `INSERT INTO payments (id, method_id, name, color, ink, number, holder, sort_order, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, '', '', ?, ?, ?)
+            ON CONFLICT(id) DO NOTHING`,
+      args: [p.id, p.methodId, p.name, p.color, p.ink, p.sort, now, now],
+    });
+  }
 
   console.log(`seeded ${categoryCount} categories, ${itemCount} items`);
   client.close();

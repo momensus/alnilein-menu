@@ -29,5 +29,26 @@ export const meta = sqliteTable('meta', {
   value: integer('value').notNull().default(0),
 });
 
+export const phones = sqliteTable('phones', {
+  id: text('id').primaryKey(),
+  number: text('number').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+});
+
+export const payments = sqliteTable('payments', {
+  id: text('id').primaryKey(),
+  methodId: text('method_id').notNull(),
+  name: text('name').notNull(),
+  color: text('color').notNull(),
+  ink: text('ink').notNull(),
+  number: text('number').notNull().default(''),
+  holder: text('holder').notNull().default(''),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+});
+
 export type Category = typeof categories.$inferSelect;
 export type MenuItem = typeof items.$inferSelect;

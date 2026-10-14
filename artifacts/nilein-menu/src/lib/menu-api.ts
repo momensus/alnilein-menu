@@ -43,6 +43,24 @@ export function fetchMenu(): Promise<PublicMenu> {
   return fetchJson<PublicMenu>('/api/menu');
 }
 
+export type SitePhone = { id: string; number: string };
+export type SitePayment = {
+  id: string;
+  methodId: string;
+  name: string;
+  color: string;
+  ink: string;
+  number: string;
+  holder: string;
+};
+export type SiteInfo = { version: number; phones: SitePhone[]; payments: SitePayment[] };
+
+export const siteQueryKey = ['site'] as const;
+
+export function fetchSite(): Promise<SiteInfo> {
+  return fetchJson<SiteInfo>('/api/site');
+}
+
 /** Format an SDG price integer with dot grouping (100000 -> 100.000), or a dash when unset. */
 export function formatPrice(price: number | null): string {
   if (price === null || price === undefined) return '—';

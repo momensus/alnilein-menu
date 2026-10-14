@@ -16,29 +16,42 @@ import {
 import {
   adminCategoriesKey,
   adminItemsKey,
+  adminPaymentsKey,
+  adminPhonesKey,
   createCategory,
   createItem,
+  createPhone,
   deleteCategory,
   deleteItem,
+  deletePhone,
   getAdminCategories,
   getAdminItems,
+  getAdminPayments,
+  getAdminPhones,
   login,
   logout,
   moveCategory,
   moveItem,
   updateCategory,
   updateItem,
+  updatePayment,
+  updatePhone,
   verifyAuth,
   type AdminCategory,
   type AdminItem,
+  type AdminPayment,
+  type AdminPhone,
   type MoveDirection,
 } from '../lib/admin-api';
-import { menuQueryKey } from '../lib/menu-api';
+import { menuQueryKey, siteQueryKey } from '../lib/menu-api';
 
 function invalidateAll(queryClient: ReturnType<typeof useQueryClient>) {
   queryClient.invalidateQueries({ queryKey: adminCategoriesKey });
   queryClient.invalidateQueries({ queryKey: adminItemsKey });
+  queryClient.invalidateQueries({ queryKey: adminPhonesKey });
+  queryClient.invalidateQueries({ queryKey: adminPaymentsKey });
   queryClient.invalidateQueries({ queryKey: menuQueryKey });
+  queryClient.invalidateQueries({ queryKey: siteQueryKey });
 }
 
 function ConfirmDialog({
@@ -443,6 +456,222 @@ function CategoryCard({ category, items, disableUp, disableDown }: { category: A
   );
 }
 
+function PhoneRow({ phone }: { phone: AdminPhone }) {
+  const queryClient = useQueryClient();
+  const [number, setNumber] = useState(phone.number);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const dirty = number.trim() !== phone.number;
+
+  const saveMutation = useMutation({
+    mutationFn: () => updatePhone(phone.id, number.trim()),
+    onSuccess: () => {
+      invalidateAll(queryClient);
+      toast.success('تم حفظ الرقم');
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : 'تعذّر الحفظ'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deletePhone(phone.id),
+    onSuccess: () => {
+      invalidateAll(queryClient);
+      toast.success('تم حذف الرقم');
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : 'تعذّر الحذف'),
+  });
+
+  return (
+    <li className="admin-item" data-testid={`admin-phone-${phone.id}`}>
+      <div className="admin-item-fields admin-phone-fields">
+        <input
+          className="admin-input"
+          value={number}
+          onChange={(event) => setNumber(event.target.value)}
+          placeholder="رقم الهاتف"
+          inputMode="tel"
+          dir="ltr"
+          aria-label="رقم الهاتف"
+          style={{ textAlign: 'left' }}
+        />
+      </div>
+      <div className="admin-item-actions">
+        {dirty && (
+          <button
+            className="admin-icon-btn admin-save"
+            onClick={() => saveMutation.mutate()}
+            disabled={saveMutation.isPending || !number.trim()}
+            aria-label="حفظ الرقم"
+            title="حفظ"
+          >
+            {saveMutation.isPending ? <LoaderCircle size={17} className="spin" /> : <Check size={17} />}
+          </button>
+        )}
+        <button
+          className="admin-icon-btn admin-danger-btn"
+          onClick={() => setConfirmDelete(true)}
+          aria-label="حذف الرقم"
+          title="حذف"
+        >
+          <Trash2 size={17} />
+        </button>
+      </div>
+      {confirmDelete && (
+        <ConfirmDialog
+          title="حذف الرقم؟"
+          message={`سيتم حذف الرقم «${phone.number}» من القائمة.`}
+          confirmLabel="حذف"
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={() => {
+            setConfirmDelete(false);
+            deleteMutation.mutate();
+          }}
+        />
+      )}
+    </li>
+  );
+}
+
+function PhonesCard() {
+  const queryClient = useQueryClient();
+  const [newNumber, setNewNumber] = useState('');
+  const phonesQuery = useQuery({ queryKey: adminPhonesKey, queryFn: getAdminPhones });
+
+  const addMutation = useMutation({
+    mutationFn: () => createPhone(newNumber.trim()),
+    onSuccess: () => {
+      setNewNumber('');
+      invalidateAll(queryClient);
+      toast.success('تمت إضافة الرقم');
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : 'تعذّر الإضافة'),
+  });
+
+  const phones = phonesQuery.data?.phones ?? [];
+
+  return (
+    <section className="admin-category" data-testid="admin-phones">
+      <div className="admin-category-head">
+        <div className="admin-category-fields">
+          <h2 className="admin-section-title">أرقام التواصل</h2>
+          <p className="admin-count">{phones.length} أرقام</p>
+        </div>
+      </div>
+      {phonesQuery.isLoading ? (
+        <div className="skeleton-line" />
+      ) : (
+        <ul className="admin-items">
+          {phones.map((phone) => (
+            <PhoneRow key={phone.id} phone={phone} />
+          ))}
+        </ul>
+      )}
+      <div className="admin-add-row admin-add-single">
+        <input
+          className="admin-input"
+          value={newNumber}
+          onChange={(event) => setNewNumber(event.target.value)}
+          placeholder="رقم جديد…"
+          inputMode="tel"
+          dir="ltr"
+          aria-label="رقم الهاتف الجديد"
+          style={{ textAlign: 'left' }}
+          data-testid="input-new-phone"
+        />
+        <button
+          className="admin-small-btn"
+          onClick={() => addMutation.mutate()}
+          disabled={addMutation.isPending || !newNumber.trim()}
+          data-testid="button-add-phone"
+        >
+          {addMutation.isPending ? <LoaderCircle size={15} className="spin" /> : <Plus size={15} />}
+          إضافة
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function PaymentRow({ payment }: { payment: AdminPayment }) {
+  const queryClient = useQueryClient();
+  const [number, setNumber] = useState(payment.number);
+  const [holder, setHolder] = useState(payment.holder);
+  const dirty = number.trim() !== payment.number || holder.trim() !== payment.holder;
+
+  const saveMutation = useMutation({
+    mutationFn: () => updatePayment(payment.id, { number: number.trim(), holder: holder.trim() }),
+    onSuccess: () => {
+      invalidateAll(queryClient);
+      toast.success(`تم حفظ ${payment.name}`);
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : 'تعذّر الحفظ'),
+  });
+
+  return (
+    <li className="admin-item admin-payment-row" data-testid={`admin-payment-${payment.id}`}>
+      <span className="admin-pay-badge" style={{ background: payment.color, color: payment.ink }}>
+        {payment.name}
+      </span>
+      <div className="admin-item-fields admin-payment-fields">
+        <input
+          className="admin-input"
+          value={number}
+          onChange={(event) => setNumber(event.target.value.replace(/[^\d]/g, ''))}
+          placeholder="رقم الحساب"
+          inputMode="numeric"
+          dir="ltr"
+          aria-label={`رقم حساب ${payment.name}`}
+          style={{ textAlign: 'left' }}
+        />
+        <input
+          className="admin-input"
+          value={holder}
+          onChange={(event) => setHolder(event.target.value)}
+          placeholder="اسم صاحب الحساب"
+          aria-label={`اسم صاحب حساب ${payment.name}`}
+        />
+      </div>
+      <div className="admin-item-actions">
+        {dirty && (
+          <button
+            className="admin-icon-btn admin-save"
+            onClick={() => saveMutation.mutate()}
+            disabled={saveMutation.isPending}
+            aria-label={`حفظ ${payment.name}`}
+            title="حفظ"
+          >
+            {saveMutation.isPending ? <LoaderCircle size={17} className="spin" /> : <Check size={17} />}
+          </button>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function PaymentsCard() {
+  const paymentsQuery = useQuery({ queryKey: adminPaymentsKey, queryFn: getAdminPayments });
+  const payments = paymentsQuery.data?.payments ?? [];
+
+  return (
+    <section className="admin-category" data-testid="admin-payments">
+      <div className="admin-category-head">
+        <div className="admin-category-fields">
+          <h2 className="admin-section-title">حسابات الدفع</h2>
+          <p className="admin-count">تظهر في أسفل القائمة مباشرة بعد الحفظ</p>
+        </div>
+      </div>
+      {paymentsQuery.isLoading ? (
+        <div className="skeleton-line" />
+      ) : (
+        <ul className="admin-items">
+          {payments.map((payment) => (
+            <PaymentRow key={payment.id} payment={payment} />
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 function Dashboard({ onLogout }: { onLogout: () => void }) {
   const queryClient = useQueryClient();
   const [newTitle, setNewTitle] = useState('');
@@ -528,6 +757,8 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
           </div>
         ) : (
           <>
+            <PhonesCard />
+            <PaymentsCard />
             {categories.map((category, index) => (
               <CategoryCard
                 key={category.id}

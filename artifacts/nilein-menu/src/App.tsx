@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Route, Switch } from 'wouter';
-import { fetchMenu, formatPrice, menuQueryKey, useMenuLiveUpdates, type PublicMenuCategory, type PublicMenuItem } from './lib/menu-api';
+import { fetchMenu, fetchSite, formatPrice, menuQueryKey, siteQueryKey, useMenuLiveUpdates, type PublicMenuCategory, type PublicMenuItem } from './lib/menu-api';
 import { art, itemArt, fishSVG, FISH_COLORS, CHECK_SVG, SEARCH_SVG, PHONE_SVG, PAYMENT_LOGOS, CATEGORY_ART } from './lib/art';
-import { RESTAURANT_NAME, RESTAURANT_SUB, PHONES, PAYMENTS } from './lib/site';
+import { RESTAURANT_NAME, RESTAURANT_SUB } from './lib/site';
 import AdminPage from './pages/admin';
 
 function norm(s: string): string {  return s
@@ -90,7 +90,14 @@ function MenuPage() {
     queryKey: menuQueryKey,
     queryFn: fetchMenu,
   });
+  const { data: siteData } = useQuery({
+    queryKey: siteQueryKey,
+    queryFn: fetchSite,
+  });
   useMenuLiveUpdates(true);
+
+  const sitePhones = useMemo(() => siteData?.phones ?? [], [siteData]);
+  const sitePayments = useMemo(() => siteData?.payments ?? [], [siteData]);
 
   const menuCategories = useMemo(() => data?.categories ?? [], [data]);
 
@@ -235,7 +242,7 @@ function MenuPage() {
     return arr;
   }, []);
 
-  const activePayment = PAYMENTS.find((p) => p.id === activePay) ?? null;
+  const activePayment = sitePayments.find((p) => p.id === activePay) ?? null;
 
   const doCopy = async (text: string) => {
     const ok = await copyText(text);
@@ -433,14 +440,14 @@ function MenuPage() {
 
         <footer>
           <h2>{RESTAURANT_NAME} {RESTAURANT_SUB}</h2>
-          {PHONES.length > 0 && (
+          {sitePhones.length > 0 && (
             <>
               <div className="pay-hint">للتواصل</div>
               <div className="phones">
-                {PHONES.map((phone) => (
-                  <a key={phone} className="phone" href={`tel:${phone.replace(/\s/g, '')}`}>
+                {sitePhones.map((phone) => (
+                  <a key={phone.id} className="phone" href={`tel:${phone.number.replace(/\s/g, '')}`}>
                     <span dangerouslySetInnerHTML={{ __html: PHONE_SVG }} />
-                    {phone}
+                    {phone.number}
                   </a>
                 ))}
               </div>
@@ -452,7 +459,7 @@ function MenuPage() {
           </div>
           <div className="pay">
             <div className={`pay-grid${activePay ? ' sel' : ''}`}>
-              {PAYMENTS.map((pm) => (
+              {sitePayments.map((pm) => (
                 <button
                   key={pm.id}
                   type="button"
@@ -462,7 +469,7 @@ function MenuPage() {
                   onClick={() => setActivePay((cur) => (cur === pm.id ? null : pm.id))}
                   data-testid={`button-pay-${pm.id}`}
                 >
-                  <span className="lg" dangerouslySetInnerHTML={{ __html: PAYMENT_LOGOS[pm.id] ?? '' }} />
+                  <span className="lg" dangerouslySetInnerHTML={{ __html: PAYMENT_LOGOS[pm.methodId] ?? '' }} />
                   <span className="nm">{pm.name}</span>
                   <span className="ck" dangerouslySetInnerHTML={{ __html: CHECK_SVG }} />
                 </button>
@@ -471,7 +478,7 @@ function MenuPage() {
             {activePayment && (
               <div className="pay-d" style={css({ '--c': activePayment.color, '--ic': activePayment.ink })}>
                 <div className="hd">
-                  <span className="pd-em" dangerouslySetInnerHTML={{ __html: PAYMENT_LOGOS[activePayment.id] ?? '' }} />
+                  <span className="pd-em" dangerouslySetInnerHTML={{ __html: PAYMENT_LOGOS[activePayment.methodId] ?? '' }} />
                   {activePayment.name}
                 </div>
                 <div className="line">
