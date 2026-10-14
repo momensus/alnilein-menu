@@ -43,10 +43,10 @@ export function fetchMenu(): Promise<PublicMenu> {
   return fetchJson<PublicMenu>('/api/menu');
 }
 
-/** Format an SDG price integer with Western numerals, or a dash when unset. */
+/** Format an SDG price integer with dot grouping (100000 -> 100.000), or a dash when unset. */
 export function formatPrice(price: number | null): string {
   if (price === null || price === undefined) return '—';
-  return `${price.toLocaleString('en-US')} ج.س`;
+  return new Intl.NumberFormat('de-DE').format(price);
 }
 
 /**

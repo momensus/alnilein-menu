@@ -100,7 +100,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <div className="menu-shell admin-shell" dir="rtl" lang="ar">
-      <Toaster position="bottom-center" richColors />
+      <Toaster position="bottom-center" richColors theme="dark" />
       <div className="admin-login-wrap">
         <form className="admin-login-card" onSubmit={submit}>
           <span className="admin-login-icon"><Lock size={24} /></span>
@@ -479,7 +479,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
 
   return (
     <div className="menu-shell admin-shell" dir="rtl" lang="ar">
-      <Toaster position="bottom-center" richColors />
+      <Toaster position="bottom-center" richColors theme="dark" />
       <header className="site-header">
         <div className="header-inner">
           <span className="brand-lockup">

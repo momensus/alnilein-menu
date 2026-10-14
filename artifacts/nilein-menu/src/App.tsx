@@ -1,27 +1,88 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Route, Switch } from 'wouter';
-import {
-  ArrowUp,
-  ChevronDown,
-  ChevronLeft,
-  CircleHelp,
-  Fish,
-  Search,
-  X,
-} from 'lucide-react';
-import { fetchMenu, formatPrice, menuQueryKey, useMenuLiveUpdates } from './lib/menu-api';
+import { fetchMenu, formatPrice, menuQueryKey, useMenuLiveUpdates, type PublicMenuCategory, type PublicMenuItem } from './lib/menu-api';
+import { art, itemArt, fishSVG, FISH_COLORS, MELON_ICON, CHECK_SVG, SEARCH_SVG, PHONE_SVG, PAYMENT_LOGOS, CATEGORY_ART } from './lib/art';
+import { RESTAURANT_NAME, RESTAURANT_SUB, PHONES, PAYMENTS } from './lib/site';
 import AdminPage from './pages/admin';
+
+function norm(s: string): string {  return s
+    .replace(/[\u064B-\u0652]/g, '')
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/ى/g, 'ي')
+    .toLocaleLowerCase('ar');
+}
+
+/** Inline style with CSS custom properties. */
+function css(vars: Record<string, string | number>): CSSProperties {
+  return vars as CSSProperties;
+}
+
+type Bubble = { left: string; size: number; d: string; dl: string };
+function makeBubbles(n: number, min: number, max: number, dMin: number, dMax: number, seed: number): Bubble[] {
+  const out: Bubble[] = [];
+  let s = seed;
+  const rnd = () => {
+    s = (s * 1103515245 + 12345) % 2147483648;
+    return s / 2147483648;
+  };
+  for (let i = 0; i < n; i += 1) {
+    out.push({
+      left: `${(rnd() * 96).toFixed(1)}%`,
+      size: Math.round(min + rnd() * (max - min)),
+      d: `${(dMin + rnd() * (dMax - dMin)).toFixed(1)}s`,
+      dl: `${(rnd() * dMax).toFixed(1)}s`,
+    });
+  }
+  return out;
+}
+
+type HeroFish = { top: string; w: number; dur: string; delay: string; colors: [string, string, string]; rev: boolean };
+const HERO_FISH: HeroFish[] = [
+  { top: '12%', w: 74, dur: '21s', delay: '-4s', colors: FISH_COLORS.gold, rev: false },
+  { top: '30%', w: 52, dur: '26s', delay: '-14s', colors: FISH_COLORS.pearl, rev: true },
+  { top: '52%', w: 88, dur: '19s', delay: '-9s', colors: FISH_COLORS.ember, rev: false },
+  { top: '70%', w: 44, dur: '31s', delay: '-20s', colors: FISH_COLORS.gold, rev: true },
+  { top: '84%', w: 62, dur: '24s', delay: '-2s', colors: FISH_COLORS.pearl, rev: false },
+];
+
+async function copyText(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    /* fall through */
+  }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
+}
 
 function MenuPage() {
   const [activeCategory, setActiveCategory] = useState('all');
-  const [searchOpen, setSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [introOpen, setIntroOpen] = useState(true);
-  const [introLeaving, setIntroLeaving] = useState(false);
-  const [heroSettle, setHeroSettle] = useState(false);
-  const dismissTimers = useRef<number[]>([]);
+  const [loaderOn, setLoaderOn] = useState(true);
+  const [loaderGone, setLoaderGone] = useState(false);
+  const [selected, setSelected] = useState<{ item: PublicMenuItem; category: PublicMenuCategory } | null>(null);
+  const [activePay, setActivePay] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [showTop, setShowTop] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const heroRef = useRef<HTMLElement>(null);
+  const copyTimer = useRef<number | null>(null);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: menuQueryKey,
@@ -31,305 +92,493 @@ function MenuPage() {
 
   const menuCategories = useMemo(() => data?.categories ?? [], [data]);
 
+  // Loader: fixed timing, then remove from DOM
+  useEffect(() => {
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    document.body.style.overflow = 'hidden';
+    const t1 = window.setTimeout(() => setLoaderOn(false), reduced ? 300 : 2700);
+    const t2 = window.setTimeout(() => {
+      setLoaderGone(true);
+      document.body.style.overflow = '';
+    }, (reduced ? 300 : 2700) + 1100);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      document.body.style.overflow = '';
+    };
+  }, []);
+
+  // Scroll progress + back-to-top visibility
+  useEffect(() => {
+    const onScroll = () => {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      setProgress(max > 0 ? Math.min(1, window.scrollY / max) : 0);
+      setShowTop(window.scrollY > 600);
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   const filteredCategories = useMemo(() => {
-    const query = searchTerm.trim().toLocaleLowerCase('ar');
+    const query = norm(searchTerm.trim());
     return menuCategories
       .filter((category) => activeCategory === 'all' || category.id === activeCategory)
       .map((category) => ({
         ...category,
-        items: category.items.filter((item) => item.name.toLocaleLowerCase('ar').includes(query)),
+        items: category.items.filter((item) => !query || norm(item.name).includes(query)),
       }))
       .filter((category) => category.items.length > 0);
   }, [activeCategory, searchTerm, menuCategories]);
 
   const chooseCategory = (id: string) => {
     setActiveCategory(id);
-    setSearchTerm('');
+    document.getElementById('list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  const dismissIntro = useCallback(() => {
-    if (!introOpen || introLeaving) return;
-    setIntroLeaving(true);
-    const rise = window.setTimeout(() => {
-      setIntroOpen(false);
-      setIntroLeaving(false);
-      setHeroSettle(true);
-      const settle = window.setTimeout(() => setHeroSettle(false), 700);
-      dismissTimers.current.push(settle);
-    }, 880);
-    dismissTimers.current.push(rise);
-  }, [introOpen, introLeaving]);
-
+  // Scroll reveal
   useEffect(() => {
-    if (introOpen) {
-      document.body.style.overflow = 'hidden';
-      window.scrollTo({ top: 0 });
-    } else {
-      document.body.style.overflow = '';
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const els = Array.from(document.querySelectorAll('.rv:not(.in)'));
+    if (reduced || !('IntersectionObserver' in window)) {
+      els.forEach((el) => el.classList.add('in'));
+      return;
     }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [introOpen]);
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry, k) => {
+          if (entry.isIntersecting) {
+            (entry.target as HTMLElement).style.transitionDelay = `${(k % 5) * 55}ms`;
+            entry.target.classList.add('in');
+            io.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.06, rootMargin: '0px 0px -5% 0px' },
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, [filteredCategories, isLoading]);
 
-  useEffect(() => {
-    if (!introOpen) return;
-    const onWheel = (event: WheelEvent) => {
-      if (Math.abs(event.deltaY) > 4) dismissIntro();
-    };
-    const onTouchMove = () => dismissIntro();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' || event.key === 'ArrowDown' || event.key === 'PageDown' || event.key === ' ') {
-        event.preventDefault();
-        dismissIntro();
-      }
-    };
-    window.addEventListener('wheel', onWheel, { passive: true });
-    window.addEventListener('touchmove', onTouchMove, { passive: true });
-    window.addEventListener('keydown', onKey);
-    return () => {
-      window.removeEventListener('wheel', onWheel);
-      window.removeEventListener('touchmove', onTouchMove);
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [introOpen, dismissIntro]);
-
-  useEffect(() => {
-    const timers = dismissTimers.current;
-    return () => {
-      timers.forEach((timer) => window.clearTimeout(timer));
-    };
+  // Tap ripple (delegated)
+  const onRipple = useCallback((event: React.PointerEvent) => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const target = (event.target as HTMLElement).closest('.row, .chip, .pm, .cta, .copy');
+    if (!target) return;
+    const rect = (target as HTMLElement).getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height) * 2;
+    const rip = document.createElement('span');
+    rip.className = 'rip';
+    rip.style.width = `${size}px`;
+    rip.style.height = `${size}px`;
+    rip.style.left = `${event.clientX - rect.left - size / 2}px`;
+    rip.style.top = `${event.clientY - rect.top - size / 2}px`;
+    target.appendChild(rip);
+    window.setTimeout(() => rip.remove(), 700);
   }, []);
 
+  // Hero pointer parallax
+  const onHeroMove = useCallback((event: React.PointerEvent) => {
+    if (event.pointerType !== 'mouse') return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const rect = heroRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const mx = ((event.clientX - rect.left) / rect.width - 0.5).toFixed(3);
+    const my = ((event.clientY - rect.top) / rect.height - 0.5).toFixed(3);
+    heroRef.current?.style.setProperty('--mx', mx);
+    heroRef.current?.style.setProperty('--my', my);
+  }, []);
+  const onHeroLeave = useCallback(() => {
+    heroRef.current?.style.setProperty('--mx', '0');
+    heroRef.current?.style.setProperty('--my', '0');
+  }, []);
+
+  // Sheet: escape + body lock
+  useEffect(() => {
+    if (!selected) return;
+    document.body.style.overflow = 'hidden';
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSelected(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [selected]);
+
+  useEffect(() => () => {
+    if (copyTimer.current) window.clearTimeout(copyTimer.current);
+  }, []);
+
+  const ambientBubbles = useMemo(() => makeBubbles(10, 5, 16, 16, 30, 7), []);
+  const heroBubbles = useMemo(() => makeBubbles(20, 4, 15, 7, 16, 42), []);
+  const loaderBubbles = useMemo(() => makeBubbles(8, 4, 11, 3, 6, 99), []);
+  const sparkles = useMemo(() => {
+    const arr: { left: string; top: string; s: string; d: string; dl: string }[] = [];
+    let s = 1234;
+    const rnd = () => {
+      s = (s * 1103515245 + 12345) % 2147483648;
+      return s / 2147483648;
+    };
+    for (let i = 0; i < 18; i += 1) {
+      arr.push({
+        left: `${(rnd() * 100).toFixed(1)}%`,
+        top: `${(30 + rnd() * 60).toFixed(1)}%`,
+        s: `${(3 + rnd() * 6).toFixed(0)}px`,
+        d: `${(5 + rnd() * 6).toFixed(1)}s`,
+        dl: `${(rnd() * 8).toFixed(1)}s`,
+      });
+    }
+    return arr;
+  }, []);
+
+  const ribbonNames = useMemo(() => menuCategories.map((c) => c.title), [menuCategories]);
+
+  const activePayment = PAYMENTS.find((p) => p.id === activePay) ?? null;
+
+  const doCopy = async (text: string) => {
+    const ok = await copyText(text);
+    if (ok) {
+      setCopied(true);
+      if (copyTimer.current) window.clearTimeout(copyTimer.current);
+      copyTimer.current = window.setTimeout(() => setCopied(false), 1600);
+    }
+  };
+
+  const totalItems = menuCategories.reduce((sum, c) => sum + c.items.length, 0);
+
   return (
-    <div className="menu-shell" dir="rtl" lang="ar">
-      <AnimatePresence>
-        {introOpen && (
-          <motion.div
-            className={`intro-overlay${introLeaving ? ' leaving' : ''}`}
-            role="dialog"
-            aria-modal="true"
-            aria-label="أهلاً بكم في مطعم النيلين"
-            data-testid="intro-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, y: -70 }}
-            transition={{ duration: 0.45, ease: 'easeOut' }}
-          >
-            <div className="intro-sea" aria-hidden="true">
-              <span className="intro-bubble bubble-one" />
-              <span className="intro-bubble bubble-two" />
-              <span className="intro-bubble bubble-three" />
-              <span className="intro-bubble bubble-four" />
-              <Fish className="intro-fish fish-one" size={30} />
-              <Fish className="intro-fish fish-two" size={20} />
-              <Fish className="intro-fish fish-three" size={24} />
-            </div>
-
-            <motion.div
-              className="intro-inner"
-              initial={{ opacity: 0, y: 26, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ duration: 0.6, ease: 'easeOut', delay: 0.08 }}
-            >
-              <div className="intro-seal">
-                <img className="intro-logo" src="/nilein-logo.png" alt="شعار مطعم النيلين" />
+    <div className="menu-shell" dir="rtl" lang="ar" onPointerDown={onRipple}>
+      {!loaderGone && (
+        <div className={`loader${loaderOn ? '' : ' out'}`} aria-hidden="true">
+          <div className="ptw">
+            <div className="pt">
+              <div className="water">
+                <svg className="lw" viewBox="0 0 400 18" preserveAspectRatio="none">
+                  <path d="M0 9Q25 0 50 9T100 9T150 9T200 9T250 9T300 9T350 9T400 9V18H0Z" />
+                </svg>
               </div>
-              <p className="intro-kicker"><span className="live-dot" /> قائمة مطعم النيلين</p>
-              <h1 className="intro-title brand-font">على مهل…<br /><span>اختار اللي بتحبه</span></h1>
-              <p className="intro-sub">أسماك ومشاوي وأطباق من مطبخ النيلين. تصفّح قائمتنا على راحتك.</p>
-              <button
-                className="intro-cta"
-                onClick={() => { chooseCategory('all'); dismissIntro(); }}
-                data-testid="button-dismiss-intro"
-              >
-                تصفّح القائمة <ChevronLeft size={18} />
-              </button>
-              <button className="intro-scroll-hint" onClick={dismissIntro} aria-label="مرر للأسفل لعرض القائمة">
-                <span>اسحب للأسفل</span>
-                <ChevronDown size={20} />
-              </button>
-            </motion.div>
-
-            <div className="intro-tide" aria-hidden="true">
-              <svg className="tide-wave tide-back" viewBox="0 0 1440 140" preserveAspectRatio="none">
-                <path d="M0,72 C220,120 460,24 720,60 C980,96 1220,118 1440,66 L1440,140 L0,140 Z" />
-              </svg>
-              <svg className="tide-wave tide-front" viewBox="0 0 1440 140" preserveAspectRatio="none">
-                <path d="M0,84 C260,40 500,116 760,82 C1020,48 1240,92 1440,74 L1440,140 L0,140 Z" />
-              </svg>
-              <div className="tide-body" />
+              <div className="lfish" dangerouslySetInnerHTML={{ __html: fishSVG(...FISH_COLORS.gold) }} />
+              {loaderBubbles.map((b, i) => (
+                <span key={i} className="bub" style={css({ left: b.left, width: b.size, height: b.size, '--d': b.d, '--dl': b.dl })} />
+              ))}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+          <h2 className="lname">{RESTAURANT_NAME}</h2>
+          <div className="lbar" />
+        </div>
+      )}
+      <div className="ambient" aria-hidden="true">
+        {ambientBubbles.map((b, i) => (
+          <span key={i} className="bub" style={css({ left: b.left, width: b.size, height: b.size, '--d': b.d, '--dl': b.dl })} />
+        ))}
+      </div>
 
-      <header className="site-header">
-        <div className="header-inner">
-          <a className="brand-lockup" href="#top" aria-label="مطعم النيلين — بداية القائمة" data-testid="link-home">
-            <span className="brand-stamp" aria-hidden="true"><img src="/nilein-logo.png" alt="" /></span>
-            <span className="brand-copy">
-              <span className="brand-name">النيلين</span>
-              <span className="brand-subtitle">للأسماك والمشويات</span>
-            </span>
-          </a>
-          <div className="header-actions">
-            {searchOpen && (
-              <label className="search-box">
-                <Search size={17} aria-hidden="true" />
-                <input
-                  autoFocus
-                  type="search"
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="ابحث في القائمة"
-                  aria-label="ابحث في القائمة"
-                  data-testid="input-menu-search"
-                />
-                {searchTerm && (
-                  <button className="icon-button search-clear" onClick={() => setSearchTerm('')} aria-label="مسح البحث" data-testid="button-clear-search">
-                    <X size={16} />
-                  </button>
-                )}
-              </label>
-            )}
-            <button
-              className={`icon-button header-icon ${searchOpen ? 'icon-selected' : ''}`}
-              onClick={() => { setSearchOpen((open) => !open); setSearchTerm(''); }}
-              aria-label={searchOpen ? 'إغلاق البحث' : 'ابحث في القائمة'}
-              data-testid="button-toggle-search"
-            >
-              {searchOpen ? <X size={19} /> : <Search size={19} />}
+      <div className="wrap">
+        <header className="hero" ref={heroRef} onPointerMove={onHeroMove} onPointerLeave={onHeroLeave}>
+          <div className="scene" aria-hidden="true">
+            <div className="rays">
+              <div className="ray" />
+              <div className="ray" />
+              <div className="ray" />
+            </div>
+            <svg className="surface" viewBox="0 0 800 30" preserveAspectRatio="none">
+              <path d="M0 14 Q50 2 100 14 T200 14 T300 14 T400 14 T500 14 T600 14 T700 14 T800 14" />
+            </svg>
+            {HERO_FISH.map((f, i) => (
+              <span
+                key={i}
+                className={`fish${f.rev ? ' rev' : ''}`}
+                style={css({ top: f.top, width: f.w, '--dur': f.dur, '--delay': f.delay, '--sw': '1200px', '--o': 0.9 })}
+                dangerouslySetInnerHTML={{ __html: fishSVG(...f.colors) }}
+              />
+            ))}
+            {heroBubbles.map((b, i) => (
+              <span key={i} className="bub" style={css({ left: b.left, width: b.size, height: b.size, '--d': b.d, '--dl': b.dl })} />
+            ))}
+            <div className="floor" />
+          </div>
+          <div className="sparks" aria-hidden="true">
+            {sparkles.map((sp, i) => (
+              <i key={i} style={css({ left: sp.left, top: sp.top, '--s': sp.s, '--d': sp.d, '--dl': sp.dl })} />
+            ))}
+          </div>
+          <div className="hero-in enter">
+            <div className="kicker">قائمة مطعم {RESTAURANT_NAME}</div>
+            <h1 dir="auto">{RESTAURANT_NAME}</h1>
+            <p className="sub">{RESTAURANT_SUB}</p>
+            <button className="cta" type="button" onClick={() => document.getElementById('bar')?.scrollIntoView({ behavior: 'smooth' })} data-testid="button-browse-menu">
+              تصفّح القائمة
             </button>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <main id="top">
-        <section className="hero-wrap">
-          <div className={`hero hero-mark${heroSettle ? ' hero-settle' : ''}`}>
-            <div className="hero-content">
-              <div className="hero-kicker"><span className="live-dot" /> قائمة مطعم النيلين</div>
-              <h1 className="brand-font">على مهل…<br /><span>اختار اللي بتحبه</span></h1>
-              <p className="hero-description">أسماك ومشاوي وأطباق من مطبخ النيلين. تصفّح قائمتنا على راحتك.</p>
-              <a className="hero-link" href="#menu-list" onClick={() => chooseCategory('all')} data-testid="link-browse-menu">
-                تصفّح القائمة <ChevronLeft size={17} />
-              </a>
-            </div>
-            <div className="hero-side" aria-hidden="true">
-              <div className="hero-seal">
-                <img className="hero-logo" src="/nilein-logo.png" alt="" />
-              </div>
-              <span className="hero-orbit orbit-one" />
-              <span className="hero-orbit orbit-two" />
-            </div>
-            <div className="hero-footnote"><span>من أهل النيلين</span><span>قائمة الطعام</span></div>
-          </div>
-        </section>
-
-        <section className="menu-area" id="menu-list">
-          <div className="menu-intro">
-            <div>
-              <p className="eyebrow">أهلاً وسهلاً</p>
-              <h2 className="section-title">قائمة الطعام</h2>
-            </div>
-          </div>
-
-          {isLoading ? (
-            <div className="menu-loading" data-testid="loading-menu" aria-live="polite">
-              {[0, 1].map((n) => (
-                <div className="menu-section skeleton-card" key={n} aria-hidden="true">
-                  <div className="skeleton-line skeleton-title" />
-                  <div className="skeleton-line" />
-                  <div className="skeleton-line" />
-                  <div className="skeleton-line short" />
+        {ribbonNames.length > 0 && (
+          <div className="ribbon" aria-hidden="true">
+            <div className="track a">
+              {[0, 1].map((dup) => (
+                <div className="set" key={dup}>
+                  {ribbonNames.map((name, k) => (
+                    <span key={k}>
+                      <span className="w" style={css({ '--k': k })}>{name}</span>
+                      <span className="ic" style={css({ '--k': k })} dangerouslySetInnerHTML={{ __html: k % 2 === 0 ? fishSVG(...FISH_COLORS.gold) : MELON_ICON }} />
+                    </span>
+                  ))}
                 </div>
               ))}
             </div>
-          ) : isError ? (
-            <div className="empty-state" data-testid="error-menu">
-              <span className="empty-icon"><Search size={23} /></span>
-              <h3>تعذّر تحميل القائمة</h3>
-              <p>تحقق من الاتصال وحاول مرة ثانية.</p>
-              <button onClick={() => refetch()} data-testid="button-retry-menu">إعادة المحاولة</button>
-            </div>
-          ) : (
-            <>
-              <nav className="category-scroll" aria-label="أقسام القائمة">
-                <button
-                  className={`category-chip ${activeCategory === 'all' ? 'active' : ''}`}
-                  onClick={() => chooseCategory('all')}
-                  data-testid="button-category-all"
-                >كل القائمة <span>{menuCategories.reduce((sum, category) => sum + category.items.length, 0)}</span></button>
-                {menuCategories.map((category) => (
-                  <button
-                    key={category.id}
-                    className={`category-chip ${activeCategory === category.id ? 'active' : ''}`}
-                    onClick={() => chooseCategory(category.id)}
-                    data-testid={`button-category-${category.id}`}
-                  >{category.title}</button>
-                ))}
-              </nav>
-
-              <div className="results-topline">
-                <span>{searchTerm ? `نتائج البحث عن «${searchTerm}»` : activeCategory === 'all' ? 'أطباق من قائمتنا' : menuCategories.find((category) => category.id === activeCategory)?.note}</span>
-                <span className="results-count">{filteredCategories.reduce((sum, category) => sum + category.items.length, 0)} صنف</span>
-              </div>
-
-              {filteredCategories.length > 0 ? (
-                <div className="menu-sections">
-                  {filteredCategories.map((category) => (
-                    <section className="menu-section" key={category.id} aria-labelledby={`heading-${category.id}`}>
-                      <div className="category-heading">
-                        <div className="category-title-wrap">
-                          <span className="category-number">{String(menuCategories.findIndex((c) => c.id === category.id) + 1).padStart(2, '0')}</span>
-                          <div>
-                            <h3 id={`heading-${category.id}`}>{category.title}</h3>
-                            <p>{category.note}</p>
-                          </div>
-                        </div>
-                        <span className="heading-rule" />
-                        <span className="heading-count">{category.items.length} أصناف</span>
-                      </div>
-                      <div className="items-grid">
-                        {category.items.map((item) => (
-                          <article className="menu-item" key={item.id} data-testid={`card-menu-item-${item.id}`}>
-                            <h4>{item.name}</h4>
-                            <span className="item-price">{formatPrice(item.price)}</span>
-                          </article>
-                        ))}
-                      </div>
-                    </section>
+            <div className="track b">
+              {[0, 1].map((dup) => (
+                <div className="set" key={dup}>
+                  {ribbonNames.map((name, k) => (
+                    <span key={k}>
+                      <span className="w" style={css({ '--k': k })}>{name}</span>
+                      <span className="ic" style={css({ '--k': k })} dangerouslySetInnerHTML={{ __html: k % 2 === 0 ? MELON_ICON : fishSVG(...FISH_COLORS.ember) }} />
+                    </span>
                   ))}
                 </div>
-              ) : (
-                <div className="empty-state" data-testid="empty-search-results">
-                  <span className="empty-icon"><Search size={23} /></span>
-                  <h3>ما لقينا هالصنف</h3>
-                  <p>جرّب كلمة ثانية أو ارجع لكل القائمة.</p>
-                  <button onClick={() => { setSearchTerm(''); chooseCategory('all'); }} data-testid="button-reset-search">عرض كل القائمة</button>
-                </div>
-              )}
+              ))}
+            </div>
+          </div>
+        )}
 
-              <aside className="menu-note">
-                <span className="note-icon"><CircleHelp size={19} /></span>
-                <p>الأسعار محدثة من إدارة المطعم. أهلاً بكم، ونوّرتونا.</p>
-              </aside>
+        <div className="bar" id="bar">
+          <div className="bar-in">
+            <div className="search">
+              <span dangerouslySetInnerHTML={{ __html: SEARCH_SVG }} />
+              <input
+                id="q"
+                type="search"
+                autoComplete="off"
+                enterKeyHint="search"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="ابحث في القائمة…"
+                aria-label="ابحث في القائمة"
+                data-testid="input-menu-search"
+              />
+              {searchTerm && (
+                <button className="clear" type="button" onClick={() => setSearchTerm('')} aria-label="مسح البحث" data-testid="button-clear-search">
+                  ×
+                </button>
+              )}
+            </div>
+            <nav className="chips" aria-label="الأقسام">
+              <button
+                className="chip"
+                type="button"
+                aria-pressed={activeCategory === 'all'}
+                onClick={() => chooseCategory('all')}
+                data-testid="button-category-all"
+              >
+                كل القائمة · {totalItems}
+              </button>
+              {menuCategories.map((category) => (
+                <button
+                  key={category.id}
+                  className="chip"
+                  type="button"
+                  aria-pressed={activeCategory === category.id}
+                  onClick={() => chooseCategory(category.id)}
+                  data-testid={`button-category-${category.id}`}
+                >
+                  <span className="ci" dangerouslySetInnerHTML={{ __html: art(CATEGORY_ART[category.id]) }} />
+                  {category.title}
+                </button>
+              ))}
+            </nav>
+          </div>
+        </div>
+
+        <main id="list" aria-live="polite">
+          {isLoading ? (
+            <div data-testid="loading-menu" aria-live="polite">
+              <div className="skel" />
+              <div className="skel" />
+              <div className="skel" />
+              <div className="skel" />
+            </div>
+          ) : isError ? (
+            <div className="state" data-testid="error-menu">
+              <h3>تعذّر تحميل القائمة</h3>
+              <p>تحقق من الاتصال وحاول مرة ثانية.</p>
+              <button type="button" onClick={() => refetch()} data-testid="button-retry-menu">إعادة المحاولة</button>
+            </div>
+          ) : filteredCategories.length === 0 ? (
+            <div className="state" data-testid="empty-search-results">
+              <h3>ما لقينا هالصنف</h3>
+              <p>جرّب كلمة ثانية أو ارجع لكل القائمة.</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchTerm('');
+                  setActiveCategory('all');
+                }}
+                data-testid="button-reset-search"
+              >
+                عرض كل القائمة
+              </button>
+            </div>
+          ) : (
+            filteredCategories.map((category, ci) => (
+              <section className="cat" key={category.id} aria-labelledby={`heading-${category.id}`}>
+                <div className="cat-head rv">
+                  <span className="cat-plate" dangerouslySetInnerHTML={{ __html: art(CATEGORY_ART[category.id]) }} />
+                  <div className="t">
+                    <h2 id={`heading-${category.id}`}>{category.title}</h2>
+                    <span className="count">{category.items.length} أصناف</span>
+                  </div>
+                  <span
+                    className="cat-fish"
+                    style={{ animationDuration: `${13 + ((ci * 5) % 9)}s`, animationDelay: `${-((ci * 7) % 12)}s` }}
+                    dangerouslySetInnerHTML={{ __html: fishSVG(...FISH_COLORS.gold) }}
+                  />
+                </div>
+                <div className="items">
+                  {category.items.map((item, i) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className="row rv"
+                      style={css({ '--i': Math.min(i, 10) })}
+                      onClick={() => setSelected({ item, category })}
+                      data-testid={`card-menu-item-${item.id}`}
+                    >
+                      <span className="th" dangerouslySetInnerHTML={{ __html: itemArt(item.id, category.id) }} />
+                      <span className="name" dir="auto">{item.name}</span>
+                      <span className="dots" />
+                      <span className="price">
+                        {formatPrice(item.price)}
+                        <span className="cur">ج.س</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ))
+          )}
+        </main>
+
+        <footer>
+          <h2>{RESTAURANT_NAME} {RESTAURANT_SUB}</h2>
+          {PHONES.length > 0 && (
+            <>
+              <div className="pay-hint">للتواصل</div>
+              <div className="phones">
+                {PHONES.map((phone) => (
+                  <a key={phone} className="phone" href={`tel:${phone.replace(/\s/g, '')}`}>
+                    <span dangerouslySetInnerHTML={{ __html: PHONE_SVG }} />
+                    {phone}
+                  </a>
+                ))}
+              </div>
             </>
           )}
-        </section>
-      </main>
+          <div className="pay-h">
+            <h2>حسابات الدفع</h2>
+            <p className="pay-hint">اختر وسيلة الدفع</p>
+          </div>
+          <div className="pay">
+            <div className={`pay-grid${activePay ? ' sel' : ''}`}>
+              {PAYMENTS.map((pm) => (
+                <button
+                  key={pm.id}
+                  type="button"
+                  className="pm"
+                  style={css({ '--c': pm.color, '--ic': pm.ink })}
+                  aria-pressed={activePay === pm.id}
+                  onClick={() => setActivePay((cur) => (cur === pm.id ? null : pm.id))}
+                  data-testid={`button-pay-${pm.id}`}
+                >
+                  <span className="lg" dangerouslySetInnerHTML={{ __html: PAYMENT_LOGOS[pm.id] ?? '' }} />
+                  <span className="nm">{pm.name}</span>
+                  <span className="ck" dangerouslySetInnerHTML={{ __html: CHECK_SVG }} />
+                </button>
+              ))}
+            </div>
+            {activePayment && (
+              <div className="pay-d" style={css({ '--c': activePayment.color, '--ic': activePayment.ink })}>
+                <div className="hd">
+                  <span className="pd-em" dangerouslySetInnerHTML={{ __html: PAYMENT_LOGOS[activePayment.id] ?? '' }} />
+                  {activePayment.name}
+                </div>
+                <div className="line">
+                  {activePayment.number ? (
+                    <span className="num">{activePayment.number}</span>
+                  ) : (
+                    <span className="num none">سيتم إضافة الرقم قريباً</span>
+                  )}
+                  {activePayment.number && (
+                    <button
+                      type="button"
+                      className={`copy${copied ? ' ok' : ''}`}
+                      onClick={() => doCopy(activePayment.number)}
+                      data-testid="button-copy-account"
+                    >
+                      {copied ? 'تم النسخ' : 'نسخ'}
+                    </button>
+                  )}
+                </div>
+                {activePayment.holder && (
+                  <div className="own">
+                    <span>اسم صاحب الحساب</span>
+                    <strong>{activePayment.holder}</strong>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </footer>
+      </div>
 
-      <footer className="site-footer">
-        <div className="footer-brand">
-          <span className="footer-name brand-font">النيلين</span>
-          <span>للأسماك والمشويات</span>
-        </div>
-        <p>أهلاً بكم، ونوّرتونا.</p>
-        <button className="back-top" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} aria-label="العودة إلى أعلى الصفحة" data-testid="button-back-to-top"><ArrowUp size={17} /></button>
-        <span className="footer-end">قائمة الطعام · مطعم النيلين</span>
-      </footer>
+      <div
+        className={`scrim${selected ? ' on' : ''}`}
+        onClick={() => setSelected(null)}
+        role="presentation"
+      >
+        {selected && (
+          <div
+            className="sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="s-name"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="art">
+              <div className="plate-big" dangerouslySetInnerHTML={{ __html: itemArt(selected.item.id, selected.category.id) }} />
+            </div>
+            <button className="x" type="button" onClick={() => setSelected(null)} aria-label="إغلاق" data-testid="button-close-sheet">
+              ×
+            </button>
+            <div className="sheet-body">
+              <span className="cat-tag">{selected.category.title}</span>
+              <h2 id="s-name" dir="auto">{selected.item.name}</h2>
+              <div className="big">
+                {formatPrice(selected.item.price)}
+                <small>ج.س</small>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
+      <div className="pgbar" style={{ transform: `scaleX(${progress})` }} aria-hidden="true" />
+      <button
+        type="button"
+        className={`totop${showTop ? ' show' : ''}`}
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        aria-label="العودة إلى أعلى الصفحة"
+        data-testid="button-back-to-top"
+      >
+        <svg className="ring" viewBox="0 0 48 48" aria-hidden="true">
+          <circle cx="24" cy="24" r="20" />
+          <circle className="prg" cx="24" cy="24" r="20" style={css({ '--p': 125.66 * (1 - progress) })} />
+        </svg>
+        <svg className="ar" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 19V5 M5 12l7-7 7 7" />
+        </svg>
+      </button>
     </div>
   );
 }
