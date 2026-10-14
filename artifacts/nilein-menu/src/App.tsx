@@ -292,9 +292,8 @@ function MenuPage() {
                         <span className="heading-count">{category.items.length} أصناف</span>
                       </div>
                       <div className="items-grid">
-                        {category.items.map((item, index) => (
+                        {category.items.map((item) => (
                           <article className="menu-item" key={item.id} data-testid={`card-menu-item-${item.id}`}>
-                            <span className="item-index">{String(index + 1).padStart(2, '0')}</span>
                             <h4>{item.name}</h4>
                             <span className="item-price">{formatPrice(item.price)}</span>
                           </article>
