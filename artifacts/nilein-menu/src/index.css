@@ -716,7 +716,7 @@ body { background: #120c0b; margin: 0; }
 .enter > *:nth-child(3) { animation-delay: .35s; }
 .enter > *:nth-child(4) { animation-delay: .5s; }
 @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
-.menu-shell .hero::after { content: ""; position: absolute; inset: 10px; border-radius: 20px; border: 1px solid rgba(224,175,85,.5); pointer-events: none; z-index: 3; }
+.menu-shell .hero::after { content: ""; position: absolute; inset: 10px; width: auto; height: auto; border-radius: 20px; border: 1px solid rgba(224,175,85,.5); box-shadow: none; transform: none; pointer-events: none; z-index: 3; }
 .hero-in { transition: transform .35s ease-out; transform: translate3d(calc(var(--mx, 0) * 10px), calc(var(--my, 0) * 8px), 0); }
 .rays { transition: transform .5s ease-out; transform: translate3d(calc(var(--mx, 0) * -18px), 0, 0); }
 .sparks { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
