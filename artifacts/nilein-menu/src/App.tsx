@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { useQuery } from '@tanstack/react-query';
 import { Route, Switch } from 'wouter';
 import { fetchMenu, formatPrice, menuQueryKey, useMenuLiveUpdates, type PublicMenuCategory, type PublicMenuItem } from './lib/menu-api';
-import { art, itemArt, fishSVG, FISH_COLORS, MELON_ICON, CHECK_SVG, SEARCH_SVG, PHONE_SVG, PAYMENT_LOGOS, CATEGORY_ART } from './lib/art';
+import { art, itemArt, fishSVG, FISH_COLORS, CHECK_SVG, SEARCH_SVG, PHONE_SVG, PAYMENT_LOGOS, CATEGORY_ART } from './lib/art';
 import { RESTAURANT_NAME, RESTAURANT_SUB, PHONES, PAYMENTS } from './lib/site';
 import AdminPage from './pages/admin';
 
@@ -40,11 +40,11 @@ function makeBubbles(n: number, min: number, max: number, dMin: number, dMax: nu
 
 type HeroFish = { top: string; w: number; dur: string; delay: string; colors: [string, string, string]; rev: boolean };
 const HERO_FISH: HeroFish[] = [
-  { top: '12%', w: 74, dur: '21s', delay: '-4s', colors: FISH_COLORS.gold, rev: false },
-  { top: '30%', w: 52, dur: '26s', delay: '-14s', colors: FISH_COLORS.pearl, rev: true },
-  { top: '52%', w: 88, dur: '19s', delay: '-9s', colors: FISH_COLORS.ember, rev: false },
-  { top: '70%', w: 44, dur: '31s', delay: '-20s', colors: FISH_COLORS.gold, rev: true },
-  { top: '84%', w: 62, dur: '24s', delay: '-2s', colors: FISH_COLORS.pearl, rev: false },
+  { top: '12%', w: 88, dur: '21s', delay: '-4s', colors: FISH_COLORS.gold, rev: false },
+  { top: '30%', w: 62, dur: '26s', delay: '-14s', colors: FISH_COLORS.pearl, rev: true },
+  { top: '52%', w: 104, dur: '19s', delay: '-9s', colors: FISH_COLORS.ember, rev: false },
+  { top: '70%', w: 52, dur: '31s', delay: '-20s', colors: FISH_COLORS.gold, rev: true },
+  { top: '84%', w: 74, dur: '24s', delay: '-2s', colors: FISH_COLORS.pearl, rev: false },
 ];
 
 async function copyText(text: string): Promise<boolean> {
@@ -233,8 +233,6 @@ function MenuPage() {
     return arr;
   }, []);
 
-  const ribbonNames = useMemo(() => menuCategories.map((c) => c.title), [menuCategories]);
-
   const activePayment = PAYMENTS.find((p) => p.id === activePay) ?? null;
 
   const doCopy = async (text: string) => {
@@ -309,39 +307,10 @@ function MenuPage() {
             <h1 dir="auto">{RESTAURANT_NAME}</h1>
             <p className="sub">{RESTAURANT_SUB}</p>
             <button className="cta" type="button" onClick={() => document.getElementById('bar')?.scrollIntoView({ behavior: 'smooth' })} data-testid="button-browse-menu">
-              تصفّح القائمة
+              استعرض القائمة
             </button>
           </div>
         </header>
-
-        {ribbonNames.length > 0 && (
-          <div className="ribbon" aria-hidden="true">
-            <div className="track a">
-              {[0, 1].map((dup) => (
-                <div className="set" key={dup}>
-                  {ribbonNames.map((name, k) => (
-                    <span key={k}>
-                      <span className="w" style={css({ '--k': k })}>{name}</span>
-                      <span className="ic" style={css({ '--k': k })} dangerouslySetInnerHTML={{ __html: k % 2 === 0 ? fishSVG(...FISH_COLORS.gold) : MELON_ICON }} />
-                    </span>
-                  ))}
-                </div>
-              ))}
-            </div>
-            <div className="track b">
-              {[0, 1].map((dup) => (
-                <div className="set" key={dup}>
-                  {ribbonNames.map((name, k) => (
-                    <span key={k}>
-                      <span className="w" style={css({ '--k': k })}>{name}</span>
-                      <span className="ic" style={css({ '--k': k })} dangerouslySetInnerHTML={{ __html: k % 2 === 0 ? MELON_ICON : fishSVG(...FISH_COLORS.ember) }} />
-                    </span>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         <div className="bar" id="bar">
           <div className="bar-in">

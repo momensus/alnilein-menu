@@ -682,7 +682,7 @@ button { cursor: pointer; }
 .ray:nth-child(1) { left: 12%; animation-delay: -2s; }
 .ray:nth-child(2) { left: 46%; width: 140px; animation-delay: -5s; animation-duration: 12s; }
 .ray:nth-child(3) { left: 78%; width: 70px; animation-delay: -7s; animation-duration: 10s; }
-@keyframes sway { from { opacity: .25; transform: skewX(-18deg) translateX(-22px); } to { opacity: .9; transform: skewX(-18deg) translateX(26px); } }
+@keyframes sway { from { opacity: .18; transform: skewX(-18deg) translateX(-22px); } to { opacity: .7; transform: skewX(-18deg) translateX(26px); } }
 .surface { position: absolute; top: 0; left: 0; width: 200%; height: 30px; animation: slide 14s linear infinite; }
 .surface path { fill: none; stroke: rgba(200,240,245,.45); stroke-width: 2; }
 @keyframes slide { to { transform: translateX(-50%); } }
