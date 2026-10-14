@@ -508,6 +508,9 @@ button { cursor: pointer; }
 .admin-icon-btn { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid #d5e1f4; border-radius: 8px; color: var(--royal); background: #fff; transition: transform .15s, background .15s; }
 .admin-icon-btn:active { transform: scale(.93); }
 .admin-icon-btn:disabled { opacity: .5; }
+.admin-move-pair { display: flex; gap: 6px; }
+.admin-move-btn { width: 38px; height: 38px; }
+.admin-move-btn:disabled { opacity: .3; pointer-events: none; }
 .admin-save { color: #fff; border-color: #1c7a3d; background: #1c7a3d; }
 .admin-danger-btn { color: #b4232a; border-color: #f3c6c8; }
 .admin-small-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; padding: 0 15px; border: 0; border-radius: 8px; color: #fff; background: var(--royal); font-size: 12px; font-weight: 700; white-space: nowrap; }

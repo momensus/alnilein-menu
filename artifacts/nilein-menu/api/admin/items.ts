@@ -39,6 +39,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ items: rows });
     }
     if (req.method === 'POST') {
+      if (req.body?.action === 'move') {
+        const id = typeof req.body?.id === 'string' ? req.body.id : '';
+        const direction = req.body?.direction;
+        if (!id || (direction !== 'up' && direction !== 'down')) {
+          return res.status(400).json({ error: 'Invalid move request' });
+        }
+        const target = (await db.select().from(items).where(eq(items.id, id)))[0];
+        if (!target) return res.status(404).json({ error: 'Item not found' });
+        const siblings = await db
+          .select()
+          .from(items)
+          .where(eq(items.categoryId, target.categoryId))
+          .orderBy(asc(items.sortOrder));
+        const index = siblings.findIndex((row) => row.id === id);
+        const neighbor = direction === 'up' ? siblings[index - 1] : siblings[index + 1];
+        if (!neighbor) return res.status(200).json({ ok: true });
+        const now = Date.now();
+        await db.update(items).set({ sortOrder: neighbor.sortOrder, updatedAt: now }).where(eq(items.id, target.id));
+        await db.update(items).set({ sortOrder: target.sortOrder, updatedAt: now }).where(eq(items.id, neighbor.id));
+        await bumpMenuVersion();
+        return res.status(200).json({ ok: true });
+      }
       const categoryId = typeof req.body?.categoryId === 'string' ? req.body.categoryId : '';
       const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
       if (!categoryId) return res.status(400).json({ error: 'القسم مطلوب' });

@@ -104,3 +104,19 @@ export function updateItem(
 export function deleteItem(id: string) {
   return request<{ ok: boolean }>(`/api/admin/items?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
+
+export type MoveDirection = 'up' | 'down';
+
+export function moveItem(id: string, direction: MoveDirection) {
+  return request<{ ok: boolean }>('/api/admin/items', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'move', id, direction }),
+  });
+}
+
+export function moveCategory(id: string, direction: MoveDirection) {
+  return request<{ ok: boolean }>('/api/admin/categories', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'move', id, direction }),
+  });
+}

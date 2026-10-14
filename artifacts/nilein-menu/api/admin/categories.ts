@@ -28,6 +28,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ categories: rows });
     }
     if (req.method === 'POST') {
+      if (req.body?.action === 'move') {
+        const id = typeof req.body?.id === 'string' ? req.body.id : '';
+        const direction = req.body?.direction;
+        if (!id || (direction !== 'up' && direction !== 'down')) {
+          return res.status(400).json({ error: 'Invalid move request' });
+        }
+        const ordered = await db.select().from(categories).orderBy(asc(categories.sortOrder));
+        const index = ordered.findIndex((row) => row.id === id);
+        if (index < 0) return res.status(404).json({ error: 'Category not found' });
+        const neighbor = direction === 'up' ? ordered[index - 1] : ordered[index + 1];
+        if (!neighbor) return res.status(200).json({ ok: true });
+        const now = Date.now();
+        await db.update(categories).set({ sortOrder: neighbor.sortOrder, updatedAt: now }).where(eq(categories.id, id));
+        await db.update(categories).set({ sortOrder: ordered[index].sortOrder, updatedAt: now }).where(eq(categories.id, neighbor.id));
+        await bumpMenuVersion();
+        return res.status(200).json({ ok: true });
+      }
       const title = typeof req.body?.title === 'string' ? req.body.title.trim() : '';
       const note = typeof req.body?.note === 'string' ? req.body.note.trim() : '';
       if (!title) return res.status(400).json({ error: 'اسم القسم مطلوب' });

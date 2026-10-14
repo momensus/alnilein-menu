@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Toaster, toast } from 'sonner';
 import {
   Check,
+  ChevronDown,
+  ChevronUp,
   Eye,
   EyeOff,
   LoaderCircle,
@@ -22,11 +24,14 @@ import {
   getAdminItems,
   login,
   logout,
+  moveCategory,
+  moveItem,
   updateCategory,
   updateItem,
   verifyAuth,
   type AdminCategory,
   type AdminItem,
+  type MoveDirection,
 } from '../lib/admin-api';
 import { menuQueryKey } from '../lib/menu-api';
 
@@ -124,7 +129,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
   );
 }
 
-function ItemRow({ item }: { item: AdminItem }) {
+function ItemRow({ item, disableUp, disableDown }: { item: AdminItem; disableUp: boolean; disableDown: boolean }) {
   const queryClient = useQueryClient();
   const [name, setName] = useState(item.name);
   const [price, setPrice] = useState(item.price === null ? '' : String(item.price));
@@ -165,6 +170,12 @@ function ItemRow({ item }: { item: AdminItem }) {
     onError: (err) => toast.error(err instanceof Error ? err.message : 'تعذّر الحذف'),
   });
 
+  const moveMutation = useMutation({
+    mutationFn: (direction: MoveDirection) => moveItem(item.id, direction),
+    onSuccess: () => invalidateAll(queryClient),
+    onError: (err) => toast.error(err instanceof Error ? err.message : 'تعذّر الترتيب'),
+  });
+
   const hidden = item.isAvailable !== 1;
 
   return (
@@ -190,6 +201,28 @@ function ItemRow({ item }: { item: AdminItem }) {
         </label>
       </div>
       <div className="admin-item-actions">
+        <div className="admin-move-pair">
+          <button
+            className="admin-icon-btn admin-move-btn"
+            onClick={() => moveMutation.mutate('up')}
+            disabled={disableUp || moveMutation.isPending}
+            aria-label="نقل الصنف لأعلى"
+            title="لأعلى"
+            data-testid={`button-move-up-item-${item.id}`}
+          >
+            <ChevronUp size={17} />
+          </button>
+          <button
+            className="admin-icon-btn admin-move-btn"
+            onClick={() => moveMutation.mutate('down')}
+            disabled={disableDown || moveMutation.isPending}
+            aria-label="نقل الصنف لأسفل"
+            title="لأسفل"
+            data-testid={`button-move-down-item-${item.id}`}
+          >
+            <ChevronDown size={17} />
+          </button>
+        </div>
         {dirty && (
           <button
             className="admin-icon-btn admin-save"
@@ -236,7 +269,7 @@ function ItemRow({ item }: { item: AdminItem }) {
   );
 }
 
-function CategoryCard({ category, items }: { category: AdminCategory; items: AdminItem[] }) {
+function CategoryCard({ category, items, disableUp, disableDown }: { category: AdminCategory; items: AdminItem[]; disableUp: boolean; disableDown: boolean }) {
   const queryClient = useQueryClient();
   const [title, setTitle] = useState(category.title);
   const [note, setNote] = useState(category.note);
@@ -262,6 +295,12 @@ function CategoryCard({ category, items }: { category: AdminCategory; items: Adm
       toast.success('تم حذف القسم');
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : 'تعذّر الحذف'),
+  });
+
+  const moveMutation = useMutation({
+    mutationFn: (direction: MoveDirection) => moveCategory(category.id, direction),
+    onSuccess: () => invalidateAll(queryClient),
+    onError: (err) => toast.error(err instanceof Error ? err.message : 'تعذّر الترتيب'),
   });
 
   const addMutation = useMutation({
@@ -300,6 +339,28 @@ function CategoryCard({ category, items }: { category: AdminCategory; items: Adm
           />
         </div>
         <div className="admin-category-actions">
+          <div className="admin-move-pair">
+            <button
+              className="admin-icon-btn admin-move-btn"
+              onClick={() => moveMutation.mutate('up')}
+              disabled={disableUp || moveMutation.isPending}
+              aria-label="نقل القسم لأعلى"
+              title="لأعلى"
+              data-testid={`button-move-up-category-${category.id}`}
+            >
+              <ChevronUp size={17} />
+            </button>
+            <button
+              className="admin-icon-btn admin-move-btn"
+              onClick={() => moveMutation.mutate('down')}
+              disabled={disableDown || moveMutation.isPending}
+              aria-label="نقل القسم لأسفل"
+              title="لأسفل"
+              data-testid={`button-move-down-category-${category.id}`}
+            >
+              <ChevronDown size={17} />
+            </button>
+          </div>
           {dirty && (
             <button
               className="admin-small-btn"
@@ -326,8 +387,8 @@ function CategoryCard({ category, items }: { category: AdminCategory; items: Adm
       </p>
 
       <ul className="admin-items">
-        {items.map((item) => (
-          <ItemRow key={item.id} item={item} />
+        {items.map((item, index) => (
+          <ItemRow key={item.id} item={item} disableUp={index === 0} disableDown={index === items.length - 1} />
         ))}
       </ul>
 
@@ -467,11 +528,13 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
           </div>
         ) : (
           <>
-            {categories.map((category) => (
+            {categories.map((category, index) => (
               <CategoryCard
                 key={category.id}
                 category={category}
                 items={allItems.filter((item) => item.categoryId === category.id)}
+                disableUp={index === 0}
+                disableDown={index === categories.length - 1}
               />
             ))}
 
