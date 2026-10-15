@@ -5,6 +5,9 @@
       "maxDuration": 300
     }
   },
-  "rewrites": [{ "source": "/nilein-dashboard", "destination": "/index.html" }],
+  "rewrites": [
+    { "source": "/nilein-dashboard", "destination": "/index.html" },
+    { "source": "/nilein-dashboard/:path*", "destination": "/index.html" }
+  ],
   "outputDirectory": "dist/public"
 }
