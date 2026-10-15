@@ -564,6 +564,7 @@ function MenuPage() {
 function App() {
   return (
     <Switch>
+      <Route path="/nilein-dashboard" component={AdminPage} />
       <Route path="/nilein-dashboard/:rest*" component={AdminPage} />
       <Route component={MenuPage} />
     </Switch>
