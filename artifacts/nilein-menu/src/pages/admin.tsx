@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Route, Switch } from 'wouter';
 import { Toaster, toast } from 'sonner';
 import {
   Check,
@@ -10,6 +11,7 @@ import {
   LoaderCircle,
   Lock,
   LogOut,
+  Menu,
   Plus,
   Trash2,
 } from 'lucide-react';
@@ -44,6 +46,7 @@ import {
   type MoveDirection,
 } from '../lib/admin-api';
 import { menuQueryKey, siteQueryKey } from '../lib/menu-api';
+import { SidePanel } from '../components/admin/side-panel';
 
 function invalidateAll(queryClient: ReturnType<typeof useQueryClient>) {
   queryClient.invalidateQueries({ queryKey: adminCategoriesKey });
@@ -672,22 +675,13 @@ function PaymentsCard() {
   );
 }
 
-function Dashboard({ onLogout }: { onLogout: () => void }) {
+function MenuPage() {
   const queryClient = useQueryClient();
   const [newTitle, setNewTitle] = useState('');
   const [newNote, setNewNote] = useState('');
 
   const categoriesQuery = useQuery({ queryKey: adminCategoriesKey, queryFn: getAdminCategories });
   const itemsQuery = useQuery({ queryKey: adminItemsKey, queryFn: () => getAdminItems() });
-
-  const doLogout = async () => {
-    try {
-      await logout();
-    } catch {
-      /* ignore */
-    }
-    onLogout();
-  };
 
   const addCategory = useMutation({
     mutationFn: () => createCategory({ title: newTitle.trim(), note: newNote.trim() }),
@@ -707,24 +701,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
   const failed = categoriesQuery.isError || itemsQuery.isError;
 
   return (
-    <div className="menu-shell admin-shell" dir="rtl" lang="ar">
-      <Toaster position="bottom-center" richColors theme="dark" />
-      <header className="site-header">
-        <div className="header-inner">
-          <span className="brand-lockup">
-            <span className="brand-stamp" aria-hidden="true"><img src="/nilein-logo.png" alt="" /></span>
-            <span className="brand-copy">
-              <span className="brand-name">النيلين</span>
-              <span className="brand-subtitle">لوحة التحكم</span>
-            </span>
-          </span>
-          <button className="admin-logout" onClick={doLogout} data-testid="button-admin-logout">
-            <LogOut size={17} />
-            خروج
-          </button>
-        </div>
-      </header>
-
+    <>
       <main className="admin-main">
         <div className="admin-stats">
           <div className="admin-stat"><strong>{categories.length}</strong><span>أقسام</span></div>
@@ -757,8 +734,6 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
           </div>
         ) : (
           <>
-            <PhonesCard />
-            <PaymentsCard />
             {categories.map((category, index) => (
               <CategoryCard
                 key={category.id}
@@ -801,6 +776,56 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
           </>
         )}
       </main>
+    </>
+  );
+}
+
+function ContactPage() {
+  return (
+    <main className="admin-main">
+      <PhonesCard />
+      <PaymentsCard />
+    </main>
+  );
+}
+
+function AdminLayout({ onLogout, children }: { onLogout: () => void; children: React.ReactNode }) {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const doLogout = async () => {
+    try {
+      await logout();
+    } catch {
+      /* ignore */
+    }
+    onLogout();
+  };
+  return (
+    <div className="menu-shell admin-shell" dir="rtl" lang="ar">
+      <Toaster position="bottom-center" richColors theme="dark" />
+      <header className="site-header">
+        <div className="header-inner">
+          <div className="admin-brand-group">
+            <button className="admin-burger" onClick={() => setDrawerOpen(true)} aria-label="فتح قائمة التنقل" data-testid="button-admin-menu">
+              <Menu size={20} />
+            </button>
+            <span className="brand-lockup">
+              <span className="brand-stamp" aria-hidden="true"><img src="/nilein-logo.png" alt="" /></span>
+              <span className="brand-copy">
+                <span className="brand-name">النيلين</span>
+                <span className="brand-subtitle">لوحة التحكم</span>
+              </span>
+            </span>
+          </div>
+          <button className="admin-logout" onClick={doLogout} data-testid="button-admin-logout">
+            <LogOut size={17} />
+            خروج
+          </button>
+        </div>
+      </header>
+      <div className="admin-body">
+        <SidePanel open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+        {children}
+      </div>
     </div>
   );
 }
@@ -828,7 +853,14 @@ function AdminPage() {
     return <LoginForm onSuccess={() => setAuthed(true)} />;
   }
 
-  return <Dashboard onLogout={() => setAuthed(false)} />;
+  return (
+    <AdminLayout onLogout={() => setAuthed(false)}>
+      <Switch>
+        <Route path="/nilein-dashboard/contact" component={ContactPage} />
+        <Route component={MenuPage} />
+      </Switch>
+    </AdminLayout>
+  );
 }
 
 export default AdminPage;
