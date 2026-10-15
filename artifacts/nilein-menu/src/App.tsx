@@ -549,10 +549,6 @@ function MenuPage() {
         aria-label="العودة إلى أعلى الصفحة"
         data-testid="button-back-to-top"
       >
-        <svg className="ring" viewBox="0 0 48 48" aria-hidden="true">
-          <circle cx="24" cy="24" r="20" />
-          <circle className="prg" cx="24" cy="24" r="20" style={css({ '--p': 125.66 * (1 - progress) })} />
-        </svg>
         <svg className="ar" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 19V5 M5 12l7-7 7 7" />
         </svg>
